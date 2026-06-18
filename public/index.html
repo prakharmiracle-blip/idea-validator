@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ValidateAI — Know if your startup idea is worth building</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #fafaf7;
+    --surface: #ffffff;
+    --border: #e8e6df;
+    --text: #1a1a18;
+    --muted: #6b6b66;
+    --hint: #9a9a93;
+    --accent: #2563eb;
+    --accent-soft: #eaf1fd;
+    --green-bg: #e7f5ee; --green-tx: #0f6e56;
+    --amber-bg: #fbf0da; --amber-tx: #854f0b;
+    --red-bg: #fcebeb; --red-tx: #a32d2d;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border-radius: 10px; transition: all .15s; }
+  .btn-primary { background: var(--accent); color: #fff; border: none; padding: 12px 26px; font-size: 15px; font-weight: 500; }
+  .btn-primary:hover { background: #1d4fd0; }
+  .btn-ghost { background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 12px 26px; font-size: 15px; font-weight: 500; }
+  .btn-ghost:hover { background: #f3f2ec; }
+
+  header { border-bottom: 1px solid var(--border); background: var(--surface); }
+  .nav { display: flex; align-items: center; justify-content: space-between; padding: 16px 0; }
+  .logo { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 17px; }
+  .nav-links { display: flex; align-items: center; gap: 22px; font-size: 14px; color: var(--muted); }
+  .nav-links button { background: none; border: 1px solid var(--border); padding: 7px 16px; font-size: 14px; }
+
+  .hero { text-align: center; padding: 72px 0 56px; }
+  .badge { display: inline-block; background: var(--accent-soft); color: var(--accent); font-size: 13px; padding: 5px 14px; border-radius: 8px; margin-bottom: 20px; font-weight: 500; }
+  .hero h1 { font-size: 40px; line-height: 1.18; max-width: 620px; margin: 0 auto 16px; font-weight: 600; letter-spacing: -0.5px; }
+  .hero p { font-size: 17px; color: var(--muted); max-width: 500px; margin: 0 auto 28px; }
+  .hero-cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .trust { display: flex; gap: 24px; justify-content: center; margin-top: 24px; font-size: 13px; color: var(--hint); flex-wrap: wrap; }
+
+  section { padding: 56px 0; }
+  .section-alt { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .eyebrow { text-align: center; font-size: 13px; color: var(--hint); letter-spacing: 1px; margin-bottom: 8px; }
+  h2 { text-align: center; font-size: 27px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.3px; }
+  .sub { text-align: center; color: var(--muted); margin-bottom: 36px; }
+
+  .grid { display: grid; gap: 16px; }
+  .g3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .g2 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); max-width: 680px; margin: 0 auto; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
+  .step-num { width: 38px; height: 38px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 600; margin-bottom: 14px; }
+  .card h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .card p { font-size: 14px; color: var(--muted); }
+  .feat-icon { font-size: 24px; }
+
+  .price-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 24px; }
+  .price-card.featured { border: 2px solid var(--accent); position: relative; background: var(--surface); }
+  .price-tag { position: absolute; top: -12px; left: 24px; background: var(--accent); color: #fff; font-size: 12px; padding: 4px 12px; border-radius: 8px; }
+  .price { font-size: 32px; font-weight: 600; margin: 6px 0; }
+  .price span { font-size: 14px; color: var(--muted); font-weight: 400; }
+  .price-card ul { list-style: none; margin-top: 16px; }
+  .price-card li { font-size: 14px; color: var(--muted); padding: 5px 0 5px 22px; position: relative; }
+  .price-card li::before { content: '✓'; position: absolute; left: 0; color: var(--accent); }
+
+  footer { border-top: 1px solid var(--border); padding: 22px 0; font-size: 13px; color: var(--hint); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+  /* Tool / app view */
+  #app { display: none; padding: 40px 0 80px; }
+  .app-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; max-width: 680px; margin: 0 auto; }
+  label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+  input, textarea { width: 100%; font-family: inherit; font-size: 15px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); margin-bottom: 16px; resize: vertical; }
+  input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .run-btn { width: 100%; background: var(--accent); color: #fff; border: none; padding: 14px; font-size: 15px; font-weight: 500; }
+  .run-btn:hover { background: #1d4fd0; }
+  .err { color: var(--red-tx); font-size: 13px; margin-top: 10px; display: none; }
+
+  .mode-toggle { display: flex; gap: 4px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 4px; margin-bottom: 22px; }
+  .mode-btn { flex: 1; background: none; border: none; padding: 9px 10px; font-size: 14px; font-weight: 500; color: var(--muted); border-radius: 7px; }
+  .mode-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+
+  .file-drop { border: 1px dashed var(--border); border-radius: 8px; padding: 13px 14px; margin-bottom: 16px; font-size: 14px; color: var(--muted); cursor: pointer; background: var(--bg); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .file-drop:hover { border-color: var(--accent); }
+  .file-drop-row { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 10px; }
+  .file-drop-row span { color: var(--text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-drop-row button { background: none; border: none; color: var(--hint); font-size: 16px; padding: 2px 6px; line-height: 1; flex-shrink: 0; }
+  .file-drop-row button:hover { color: var(--red-tx); }
+  .file-hint { font-size: 12px; color: var(--hint); margin: -10px 0 16px; }
+
+  .agent-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; font-size: 15px; }
+  .dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); flex-shrink: 0; }
+  .dot.run { border-color: var(--accent); border-top-color: transparent; animation: spin 0.8s linear infinite; }
+  .dot.done { border: none; background: var(--green-tx); position: relative; }
+  .dot.done::after { content: '✓'; color: #fff; font-size: 11px; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .verdict { text-align: center; margin-bottom: 24px; }
+  .verdict-pill { display: inline-block; font-size: 21px; font-weight: 600; padding: 12px 32px; border-radius: var(--radius); }
+  .bar-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
+  .bar-track { height: 8px; background: var(--bg); border-radius: 6px; overflow: hidden; margin-bottom: 16px; }
+  .bar-fill { height: 100%; }
+  .result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+  .r-card h4 { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+  .r-card ul { padding-left: 18px; font-size: 14px; color: var(--muted); }
+  .back-link { display: inline-block; margin-bottom: 20px; color: var(--accent); font-size: 14px; cursor: pointer; }
+
+  @media (max-width: 560px) { .hero h1 { font-size: 30px; } .field-row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div id="home">
+  <header>
+    <div class="wrap nav">
+      <div class="logo">◆ ValidateAI</div>
+      <div class="nav-links">
+        <a href="#how">How it works</a>
+        <a href="#pricing">Pricing</a>
+        <button onclick="openApp()">Try it free</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap hero">
+    <span class="badge">✦ AI-powered idea validation</span>
+    <h1>Know if your startup idea is worth building — in minutes</h1>
+    <p>Our AI researches the market, competitors, customer pain points and risks, then tells you whether to build, modify, or avoid your idea.</p>
+    <div class="hero-cta">
+      <button class="btn-primary" onclick="openApp()">Validate my idea</button>
+      <a href="#how"><button class="btn-ghost">How it works</button></a>
+    </div>
+    <div class="trust">
+      <span>✓ No credit card</span><span>✓ 5 free validations</span><span>✓ Results in ~2 min</span>
+    </div>
+  </div>
+
+  <section id="how" class="section-alt">
+    <div class="wrap">
+      <p class="eyebrow">HOW IT WORKS</p>
+      <h2>Three simple steps</h2>
+      <p class="sub">From idea to verdict without the weeks of research.</p>
+      <div class="grid g3">
+        <div class="card"><div class="step-num">1</div><h3>Describe your idea</h3><p>Tell us your idea, who it's for, and how you'd charge.</p></div>
+        <div class="card"><div class="step-num">2</div><h3>AI does the research</h3><p>Six AI agents study the market, rivals, and risks for you.</p></div>
+        <div class="card"><div class="step-num">3</div><h3>Get your verdict</h3><p>A clear build, modify, or avoid call with scores and reasoning.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2>What our AI researches</h2>
+      <p class="sub">Every angle a smart founder would check — done automatically.</p>
+      <div class="grid g3">
+        <div class="card"><div class="feat-icon">📈</div><h3>Market size</h3><p>How big is the opportunity and is it growing?</p></div>
+        <div class="card"><div class="feat-icon">👥</div><h3>Competitors</h3><p>Who else is doing this and where are the gaps?</p></div>
+        <div class="card"><div class="feat-icon">💬</div><h3>Pain points</h3><p>What real customers complain about today.</p></div>
+        <div class="card"><div class="feat-icon">📊</div><h3>Trends</h3><p>Where the industry is heading next.</p></div>
+        <div class="card"><div class="feat-icon">💲</div><h3>Pricing</h3><p>A fair, competitive price to charge.</p></div>
+        <div class="card"><div class="feat-icon">⚠️</div><h3>Risks</h3><p>Legal, technical and market dangers ahead.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing" class="section-alt">
+    <div class="wrap">
+      <h2>Simple pricing</h2>
+      <p class="sub">Start free. Upgrade when you're ready.</p>
+      <div class="grid g2">
+        <div class="price-card">
+          <h3>Free</h3>
+          <div class="price">$0</div>
+          <p style="font-size:13px;color:var(--muted);">5 validations to try it out</p>
+          <ul><li>Full AI research</li><li>Build / modify / avoid verdict</li><li>On-screen report</li></ul>
+        </div>
+        <div class="price-card featured">
+          <span class="price-tag">Most popular</span>
+          <h3>Pro</h3>
+          <div class="price">$29<span>/mo</span></div>
+          <p style="font-size:13px;color:var(--muted);">Unlimited validations</p>
+          <ul><li>Everything in Free</li><li>Downloadable PDF reports</li><li>Saved history</li><li>Priority research</li></ul>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:32px;">
+        <button class="btn-primary" onclick="openApp()">Start validating free</button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="wrap">
+    <span>© 2026 ValidateAI</span>
+    <span>Privacy · Terms · Contact</span>
+  </footer>
+</div>
+
+<div id="app">
+  <div class="wrap">
+    <span class="back-link" onclick="closeApp()">← Back to home</span>
+
+    <div class="app-card" id="form-view">
+      <h2 style="text-align:left;font-size:22px;margin-bottom:6px;">Validate your idea</h2>
+      <p style="color:var(--muted);font-size:14px;margin-bottom:24px;">Describe your idea, or upload a document and we'll work from that instead.</p>
+
+      <div class="mode-toggle">
+        <button type="button" class="mode-btn active" id="mode-btn-manual" onclick="setMode('manual')">✍️ Describe my idea</button>
+        <button type="button" class="mode-btn" id="mode-btn-upload" onclick="setMode('upload')">📎 Upload a document</button>
+      </div>
+
+      <div id="manual-fields">
+        <label>Startup idea *</label>
+        <textarea id="f-idea" rows="2" placeholder="e.g. An AI tool that auto-generates legal contracts for freelancers"></textarea>
+        <label>Problem statement</label>
+        <textarea id="f-problem" rows="2" placeholder="What problem does it solve?"></textarea>
+        <div class="field-row">
+          <div><label>Target audience</label><input id="f-audience" placeholder="e.g. solo freelancers" /></div>
+          <div><label>Pricing model</label><input id="f-pricing" placeholder="e.g. $19/mo subscription" /></div>
+        </div>
+      </div>
+
+      <div id="upload-fields" style="display:none;">
+        <label>Upload your document *</label>
+        <div class="file-drop" id="file-drop" onclick="document.getElementById('f-file').click()">
+          <input type="file" id="f-file" accept=".pdf,.txt,.md,.csv,.png,.jpg,.jpeg,.webp" style="display:none" onchange="handleFileSelect(event)" />
+          <div id="file-drop-empty">📎 Click to upload a pitch deck, business plan, or research notes (PDF, image, or text — max 3MB)</div>
+          <div class="file-drop-row" id="file-drop-selected" style="display:none;">
+            <span id="file-name"></span>
+            <button type="button" onclick="clearFile(event)">✕</button>
+          </div>
+        </div>
+        <p class="file-hint">We'll extract the idea, problem, audience and pricing straight from your document.</p>
+      </div>
+
+      <label>Additional notes (optional)</label>
+      <textarea id="f-notes" rows="2" placeholder="Anything else worth knowing"></textarea>
+
+      <button class="run-btn" onclick="runValidation()">✦ Run validation</button>
+      <p class="err" id="err"></p>
+    </div>
+
+    <div class="app-card" id="loading-view" style="display:none;">
+      <h2 style="text-align:left;font-size:20px;margin-bottom:16px;">Researching your idea…</h2>
+      <div id="agent-list"></div>
+      <p style="color:var(--hint);font-size:13px;margin-top:16px;">This takes about a minute — the agents are searching the web.</p>
+    </div>
+
+    <div id="result-view" style="display:none;"></div>
+  </div>
+</div>
+
+<script>
+const AGENTS = [
+  { key: 'market', label: 'Market Research' },
+  { key: 'competitor', label: 'Competitor Intelligence' },
+  { key: 'painpoint', label: 'Customer Pain Points' },
+  { key: 'trend', label: 'Trend Analysis' },
+  { key: 'pricing', label: 'Pricing Analysis' },
+  { key: 'risk', label: 'Risk Analysis' },
+  { key: 'decision', label: 'Final Decision' },
+];
+const $ = (id) => document.getElementById(id);
+
+let currentMode = 'manual'; // 'manual' or 'upload'
+function setMode(mode) {
+  currentMode = mode;
+  $('mode-btn-manual').classList.toggle('active', mode === 'manual');
+  $('mode-btn-upload').classList.toggle('active', mode === 'upload');
+  $('manual-fields').style.display = mode === 'manual' ? 'block' : 'none';
+  $('upload-fields').style.display = mode === 'upload' ? 'block' : 'none';
+  $('err').style.display = 'none';
+}
+
+let uploadedFile = null; // { name, mediaType, base64 } or { name, text }
+const MAX_FILE_BYTES = 3 * 1024 * 1024;
+const TEXT_EXT = /\.(txt|md|csv)$/i;
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > MAX_FILE_BYTES) {
+    $('err').textContent = 'That file is too large — please keep it under 3MB.';
+    $('err').style.display = 'block';
+    e.target.value = '';
+    return;
+  }
+  $('err').style.display = 'none';
+  const isText = file.type === 'text/plain' || file.type === 'text/csv' || file.type === 'text/markdown' || TEXT_EXT.test(file.name);
+  const reader = new FileReader();
+  reader.onload = () => {
+    if (isText) {
+      uploadedFile = { name: file.name, text: reader.result };
+    } else {
+      uploadedFile = { name: file.name, mediaType: file.type || 'application/octet-stream', base64: reader.result.split(',')[1] };
+    }
+    $('file-drop-empty').style.display = 'none';
+    $('file-drop-selected').style.display = 'flex';
+    $('file-name').textContent = '📄 ' + file.name;
+  };
+  reader.onerror = () => {
+    $('err').textContent = 'Could not read that file — please try another.';
+    $('err').style.display = 'block';
+  };
+  if (isText) reader.readAsText(file); else reader.readAsDataURL(file);
+}
+
+function clearFile(e) {
+  e.stopPropagation();
+  uploadedFile = null;
+  $('f-file').value = '';
+  $('file-drop-empty').style.display = 'block';
+  $('file-drop-selected').style.display = 'none';
+}
+
+function openApp() { $('home').style.display = 'none'; $('app').style.display = 'block'; window.scrollTo(0, 0); }
+function closeApp() { $('app').style.display = 'none'; $('home').style.display = 'block'; window.scrollTo(0, 0); }
+
+function renderAgents(states) {
+  $('agent-list').innerHTML = AGENTS.map((a) => {
+    const st = states[a.key] || 'wait';
+    return `<div class="agent-row"><span class="dot ${st === 'wait' ? '' : st}"></span>${a.label}</div>`;
+  }).join('');
+}
+
+function bar(label, val, color) {
+  val = Math.max(0, Math.min(100, Math.round(val || 0)));
+  return `<div class="bar-label"><span style="color:var(--muted)">${label}</span><span style="font-weight:600">${val}</span></div>
+    <div class="bar-track"><div class="bar-fill" style="width:${val}%;background:${color}"></div></div>`;
+}
+
+function listItems(arr, max) {
+  const items = (arr || []).slice(0, max || 4).map((x) => {
+    const t = typeof x === 'object' ? (x.name || x.type || x.description || JSON.stringify(x)) : x;
+    return `<li>${t}</li>`;
+  }).join('');
+  return items || '<li style="color:var(--hint)">—</li>';
+}
+
+function renderResult(d, agents) {
+  const colors = { BUILD: ['var(--green-bg)', 'var(--green-tx)'], MODIFY: ['var(--amber-bg)', 'var(--amber-tx)'], AVOID: ['var(--red-bg)', 'var(--red-tx)'] };
+  const c = colors[d.recommendation] || colors.MODIFY;
+  const card = (title, body) => `<div class="card r-card"><h4>${title}</h4><div style="font-size:14px;color:var(--muted)">${body}</div></div>`;
+
+  $('result-view').innerHTML = `
+    <div class="app-card">
+      <div class="verdict"><span class="verdict-pill" style="background:${c[0]};color:${c[1]}">${d.recommendation} · ${Math.round(d.confidence)}% confidence</span></div>
+      ${bar('Market score', d.market_score, '#2563eb')}
+      ${bar('Competition score', d.competition_score, '#7c3aed')}
+      ${bar('Risk score (higher = safer)', d.risk_score, '#0f6e56')}
+      <div class="card r-card" style="margin-top:16px;"><h4>Reasoning</h4><div style="font-size:14px;color:var(--muted)">${d.reasoning || '—'}</div></div>
+      <div class="result-grid" style="margin-top:14px;">
+        ${card('Market', 'Size: ' + (agents.market.market_size || '—') + '<br>Growth: ' + (agents.market.growth_rate || '—'))}
+        ${card('Competitors', '<ul>' + listItems(agents.competitor.competitors) + '</ul>')}
+        ${card('Pain points', '<ul>' + listItems(agents.painpoint.pain_points) + '</ul>')}
+        ${card('Opportunities', '<ul>' + listItems(agents.trend.opportunities) + '</ul>')}
+        ${card('Pricing', 'Recommended: ' + (agents.pricing.recommended_price || '—'))}
+        ${card('Risks', '<ul>' + listItems(agents.risk.risks) + '</ul>')}
+      </div>
+      <button class="run-btn" style="margin-top:16px;background:var(--surface);color:var(--text);border:1px solid var(--border);" onclick="resetForm()">Validate another idea</button>
+    </div>`;
+}
+
+function resetForm() { $('result-view').style.display = 'none'; $('form-view').style.display = 'block'; }
+
+async function runValidation() {
+  const idea = $('f-idea').value.trim();
+
+  if (currentMode === 'manual' && !idea) {
+    $('err').textContent = 'Please enter a startup idea, or switch to uploading a document.';
+    $('err').style.display = 'block';
+    return;
+  }
+  if (currentMode === 'upload' && !uploadedFile) {
+    $('err').textContent = 'Please upload a document, or switch to describing your idea.';
+    $('err').style.display = 'block';
+    return;
+  }
+  $('err').style.display = 'none';
+
+  const payload = {
+    idea,
+    problem: $('f-problem').value.trim(),
+    audience: $('f-audience').value.trim(),
+    pricing: $('f-pricing').value.trim(),
+    notes: $('f-notes').value.trim(),
+    file: currentMode === 'upload' ? uploadedFile : null,
+  };
+  $('form-view').style.display = 'none';
+  $('loading-view').style.display = 'block';
+
+  const states = {};
+  AGENTS.forEach((a) => (states[a.key] = 'run'));
+  renderAgents(states);
+
+  try {
+    const res = await fetch('/api/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const raw = await res.text();
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch (parseErr) {
+      if (raw.trim().startsWith('<')) {
+        throw new Error(
+          'The /api/validate function did not run (got an HTML page back, HTTP ' + res.status +
+          '). Check that validate.js is in a top-level "api/" folder and that the project redeployed.'
+        );
+      }
+      throw new Error('Server returned an unexpected response: ' + raw.slice(0, 120));
+    }
+    if (data.error) throw new Error(data.error);
+
+    AGENTS.forEach((a) => (states[a.key] = 'done'));
+    renderAgents(states);
+
+    $('loading-view').style.display = 'none';
+    $('result-view').style.display = 'block';
+    renderResult(data.decision, data.agents);
+  } catch (e) {
+    $('loading-view').style.display = 'none';
+    $('form-view').style.display = 'block';
+    $('err').textContent = 'Something went wrong: ' + e.message;
+    $('err').style.display = 'block';
+  }
+}
+</script>
+</body>
+</html>
