@@ -1,29 +1,31 @@
 // Serverless function — runs on Vercel, keeps your API key secret.
 // The browser calls THIS, and this calls Claude. Your key never reaches the user.
 
+const SEARCH_BUDGET_NOTE = ' Use at most 2-3 web searches, then immediately write your final JSON — do not keep searching.';
+
 const AGENT_PROMPTS = {
   market: (i) => [
-    'You are a Market Research Agent. Estimate TAM, SAM, SOM, growth rate, and demand. Use web search. Output ONLY JSON: {"market_size":"","tam":"","sam":"","som":"","growth_rate":"","demand":"","confidence":0}',
+    'You are a Market Research Agent. Estimate TAM, SAM, SOM, growth rate, and demand. Use web search.' + SEARCH_BUDGET_NOTE + ' Output ONLY JSON: {"market_size":"","tam":"","sam":"","som":"","growth_rate":"","demand":"","confidence":0}',
     `IDEA: ${i.idea}\nAUDIENCE: ${i.audience}`,
   ],
   competitor: (i) => [
-    'You are a Competitor Intelligence Agent. Find direct/indirect competitors, features, pricing, gaps. Use web search. Output ONLY JSON: {"competitors":[{"name":"","type":"","pricing":""}],"feature_gaps":[],"summary":""}',
+    'You are a Competitor Intelligence Agent. Find direct/indirect competitors, features, pricing, gaps. Use web search.' + SEARCH_BUDGET_NOTE + ' Output ONLY JSON: {"competitors":[{"name":"","type":"","pricing":""}],"feature_gaps":[],"summary":""}',
     `IDEA: ${i.idea}`,
   ],
   painpoint: (i) => [
-    'You are a Customer Pain Point Agent. Find complaints, feature requests, sentiment from forums/reviews. Use web search. Output ONLY JSON: {"pain_points":[],"feature_requests":[],"sentiment_score":""}',
+    'You are a Customer Pain Point Agent. Find complaints, feature requests, sentiment from forums/reviews. Use web search.' + SEARCH_BUDGET_NOTE + ' Output ONLY JSON: {"pain_points":[],"feature_requests":[],"sentiment_score":""}',
     `PROBLEM: ${i.problem}\nIDEA: ${i.idea}`,
   ],
   trend: (i) => [
-    'You are a Trend Analysis Agent. Identify industry trends, emerging tech, opportunities. Use web search. Output ONLY JSON: {"trends":[],"opportunities":[]}',
+    'You are a Trend Analysis Agent. Identify industry trends, emerging tech, opportunities. Use web search.' + SEARCH_BUDGET_NOTE + ' Output ONLY JSON: {"trends":[],"opportunities":[]}',
     `IDEA: ${i.idea}`,
   ],
   pricing: (i) => [
-    'You are a Pricing Agent. Analyze competitor pricing, recommend a price, find revenue opportunities. Use web search. Output ONLY JSON: {"competitor_prices":[],"recommended_price":"","revenue_opportunities":[]}',
+    'You are a Pricing Agent. Analyze competitor pricing, recommend a price, find revenue opportunities. Use web search.' + SEARCH_BUDGET_NOTE + ' Output ONLY JSON: {"competitor_prices":[],"recommended_price":"","revenue_opportunities":[]}',
     `IDEA: ${i.idea}\nMODEL: ${i.pricing}`,
   ],
   risk: (i) => [
-    'You are a Risk Analysis Agent. Identify technical, market, legal, competition risks. Output ONLY JSON: {"risks":[{"type":"","description":"","severity":""}],"severity":""}',
+    'You are a Risk Analysis Agent. Identify technical, market, legal, competition risks.' + SEARCH_BUDGET_NOTE + ' Output ONLY JSON: {"risks":[{"type":"","description":"","severity":""}],"severity":""}',
     `IDEA: ${i.idea}`,
   ],
 };
@@ -32,7 +34,10 @@ const DECISION_PROMPT =
   'You are the Final Decision Agent. Given all research outputs, calculate scores 0-100 ' +
   '(market_score: size+growth+demand; competition_score: HIGHER=better entry/less saturated; ' +
   'risk_score: HIGHER=safer) and give recommendation BUILD (strong), MODIFY (mixed/pivot), or ' +
-  'AVOID (weak/risky). Output ONLY JSON: {"recommendation":"BUILD|MODIFY|AVOID","confidence":0,' +
+  'AVOID (weak/risky). Base your reasoning ONLY on the research JSON provided below — you have ' +
+  'no web access here. If one or more agents returned empty/missing data, say so plainly in your ' +
+  'reasoning instead of inventing findings to fill the gap. ' +
+  'Output ONLY JSON: {"recommendation":"BUILD|MODIFY|AVOID","confidence":0,' +
   '"market_score":0,"competition_score":0,"risk_score":0,"reasoning":""}';
 
 // Builds an Anthropic content block for an uploaded PDF/image so it can be
@@ -62,8 +67,17 @@ function buildFileNote(file) {
   return '';
 }
 
-async function callClaude(system, user, maxTokens, fileBlock) {
+async function callClaude(system, user, maxTokens, fileBlock, enableSearch) {
   const content = fileBlock ? [fileBlock, { type: 'text', text: user }] : user;
+  const body = {
+    model: 'claude-sonnet-4-6',
+    max_tokens: maxTokens || 1200,
+    system: system + '\nRespond ONLY with valid JSON. No prose, no markdown fences.',
+    messages: [{ role: 'user', content }],
+  };
+  if (enableSearch) {
+    body.tools = [{ type: 'web_search_20250305', name: 'web_search' }];
+  }
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -71,16 +85,13 @@ async function callClaude(system, user, maxTokens, fileBlock) {
       'x-api-key': process.env.ANTHROPIC_API_KEY,
       'anthropic-version': '2023-06-01',
     },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: maxTokens || 1200,
-      system: system + '\nRespond ONLY with valid JSON. No prose, no markdown fences.',
-      messages: [{ role: 'user', content }],
-      tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-    }),
+    body: JSON.stringify(body),
   });
   const data = await res.json();
   if (data.error) throw new Error(data.error.message || 'Claude API error');
+  if (data.stop_reason === 'max_tokens') {
+    throw new Error('Response was cut off before finishing (hit max_tokens) — raise maxTokens.');
+  }
   const text = (data.content || [])
     .filter((b) => b.type === 'text')
     .map((b) => b.text)
@@ -143,16 +154,20 @@ export default async function handler(req, res) {
         const [system, baseUser] = AGENT_PROMPTS[key](input);
         const user = baseUser + fileNote;
         try {
-          return [key, await callClaude(system, user, 1200, fileBlock)];
+          return [key, await callClaude(system, user, 3000, fileBlock, true)];
         } catch (e) {
+          console.error(`Agent "${key}" failed:`, e.message);
           return [key, {}];
         }
       })
     );
     const agents = Object.fromEntries(results);
 
-    // Aggregate into a final decision.
-    const decision = await callClaude(DECISION_PROMPT, JSON.stringify(agents), 1500);
+    // Aggregate into a final decision. No web search here — this agent
+    // should reason ONLY over what the six research agents already found,
+    // not go off and research independently (which produced inconsistent
+    // results when the agents above failed silently).
+    const decision = await callClaude(DECISION_PROMPT, JSON.stringify(agents), 2000, null, false);
 
     return res.status(200).json({ decision, agents });
   } catch (err) {
