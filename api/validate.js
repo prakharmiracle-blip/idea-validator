@@ -72,7 +72,7 @@ async function callClaude(system, user, maxTokens, fileBlock) {
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: maxTokens || 1200,
       system: system + '\nRespond ONLY with valid JSON. No prose, no markdown fences.',
       messages: [{ role: 'user', content }],
